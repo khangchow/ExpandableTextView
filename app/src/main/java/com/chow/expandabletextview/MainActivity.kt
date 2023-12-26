@@ -15,6 +15,8 @@ class MainActivity : AppCompatActivity() {
             text = "Hello WorldHello WorldHello WorldHello WorldHello WorldHello WorldHello World"
             textSize = 25
             textColor = Color.RED
+            ellipsizedTextColor = Color.BLUE
+            ellipsizedText = "...Whatsup!"
         }
     }
 }
