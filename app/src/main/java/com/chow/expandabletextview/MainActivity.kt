@@ -12,11 +12,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         binding.tv.apply {
-            text = "Hello WorldHello WorldHello WorldHello WorldHello WorldHello WorldHello World"
+            text = "1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950"
             textSize = 25
             textColor = Color.RED
             ellipsizedTextColor = Color.BLUE
             ellipsizedText = "...Whatsup!"
+            lineToEllipsize = 3
         }
     }
 }
