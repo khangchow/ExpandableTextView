@@ -39,7 +39,6 @@ class ExpandableTextView @JvmOverloads constructor(
             if (value == field || value < 0) return
             field = value
             textPaint.textSize = value.sp
-            ellipsizedTextWidth = getTextWidth(ellipsizedText)
             isNeedCalculated = true
             invalidate()
         }
@@ -64,21 +63,19 @@ class ExpandableTextView @JvmOverloads constructor(
             if (value == field || value.isBlank()) return
             field = value
             isNeedCalculated = true
-            ellipsizedTextWidth = getTextWidth(value)
             invalidate()
         }
-    private var ellipsizedTextWidth = getTextWidth(ellipsizedText)
     private var isRemeasured = false
     private var isNeedCalculated = true
     private lateinit var expandedStaticLayout: StaticLayout
     private lateinit var collapsedStaticLayout: StaticLayout
     var lineToEllipsize = 1
-    set(value) {
-        if (value <= 0 || value == field) return
-        field = value
-        isNeedCalculated = true
-        invalidate()
-    }
+        set(value) {
+            if (value <= 0 || value == field) return
+            field = value
+            isNeedCalculated = true
+            invalidate()
+        }
 
     init {
         setOnClickListener {
@@ -152,25 +149,17 @@ class ExpandableTextView @JvmOverloads constructor(
         }
     }
 
-    private fun getTextWidth(text: String): Int {
-        val contentBound = Rect()
-        textPaint.getTextBounds(text, 0, text.length, contentBound)
-        return contentBound.width()
-    }
-
     private fun getTextPositionToEllipsize(layoutWidth: Int): Int {
         if (text.isEmpty()) return 0
-        var subString = ""
-        var subStringEndPosition = 0
-        while (getTextWidth(subString) + ellipsizedTextWidth < layoutWidth * lineToEllipsize) {
-            val endPosition = ++subStringEndPosition
-            if (endPosition > text.length) break
-            subString = text.substring(0, endPosition)
+        var subStringEndPosition = 1
+        while (getStaticLayout(
+                text.substring(0, subStringEndPosition) + ellipsizedText,
+                boundWidth = layoutWidth
+            ).lineCount <= lineToEllipsize
+        ) {
+            subStringEndPosition++
         }
-        while (getStaticLayout(text.substring(0, subStringEndPosition) + ellipsizedText, boundWidth = layoutWidth).lineCount > lineToEllipsize) {
-            subStringEndPosition--
-        }
-        return subStringEndPosition
+        return subStringEndPosition - 1
     }
 
     override fun setBackground(background: Drawable?) {
