@@ -1,15 +1,14 @@
 package com.libaray.expandable_textview
 
 import android.content.Context
-import android.content.res.ColorStateList
 import android.content.res.Resources
-import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.PorterDuff
-import android.graphics.Rect
-import android.graphics.drawable.Drawable
-import android.text.*
+import android.text.Layout
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
 import android.util.TypedValue
@@ -28,6 +27,7 @@ class ExpandableTextView @JvmOverloads constructor(
             if (value == field) return
             field = value
             isNeedCalculated = true
+            hasViewWidth = false
             invalidate()
         }
     private val textPaint = TextPaint().apply {
@@ -40,6 +40,7 @@ class ExpandableTextView @JvmOverloads constructor(
             field = value
             textPaint.textSize = value.sp
             isNeedCalculated = true
+            hasViewWidth = false
             invalidate()
         }
     var textColor = Color.BLACK
@@ -48,6 +49,7 @@ class ExpandableTextView @JvmOverloads constructor(
             field = value
             textPaint.color = value
             isNeedCalculated = true
+            hasViewWidth = false
             invalidate()
         }
     var ellipsizedTextColor = Color.GRAY
@@ -55,25 +57,30 @@ class ExpandableTextView @JvmOverloads constructor(
             if (value == field) return
             field = value
             isNeedCalculated = true
+            hasViewWidth = false
             invalidate()
         }
-    private var contentHeight = 0
+    private var contentHeight = 1
     var ellipsizedText = "...See more"
         set(value) {
             if (value == field || value.isBlank()) return
             field = value
             isNeedCalculated = true
+            hasViewWidth = false
             invalidate()
         }
     private var isRemeasured = false
     private var isNeedCalculated = true
     private lateinit var expandedStaticLayout: StaticLayout
     private lateinit var collapsedStaticLayout: StaticLayout
+    private var hasViewWidth = false
+    private var viewWidth = 0
     var lineToEllipsize = 1
         set(value) {
             if (value <= 0 || value == field) return
             field = value
             isNeedCalculated = true
+            hasViewWidth = false
             invalidate()
         }
 
@@ -88,6 +95,29 @@ class ExpandableTextView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        if (isNeedCalculated && hasViewWidth) {
+            expandedStaticLayout = getStaticLayout(text, boundWidth = viewWidth)
+            if (expandedStaticLayout.lineCount <= lineToEllipsize) {
+                isCollapsable = false
+                isExpanding = true
+            } else {
+                val ellipsizedPosition = getTextPositionToEllipsize(viewWidth)
+                val collapsedString = text.substring(0, ellipsizedPosition) + ellipsizedText
+                val collapsedStringWithSpan = getCollapsedStringWithSpan(collapsedString)
+                collapsedStaticLayout = getStaticLayout(
+                    spannableString = collapsedStringWithSpan,
+                    boundWidth = viewWidth
+                )
+                isCollapsable = true
+                isExpanding = false
+            }
+            isNeedCalculated = false
+        }
+        contentHeight = if (isExpanding) {
+            if (::expandedStaticLayout.isInitialized) expandedStaticLayout.height else 1
+        } else {
+            if (::collapsedStaticLayout.isInitialized) collapsedStaticLayout.height else 1
+        }
         setMeasuredDimension(widthMeasureSpec, contentHeight)
     }
 
@@ -116,29 +146,15 @@ class ExpandableTextView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (isNeedCalculated) {
-            expandedStaticLayout = getStaticLayout(text, boundWidth = width)
-            if (expandedStaticLayout.lineCount <= lineToEllipsize) {
-                isCollapsable = false
-                isExpanding = true
-            } else {
-                val ellipsizedPosition = getTextPositionToEllipsize(width)
-                val collapsedString = text.substring(0, ellipsizedPosition) + ellipsizedText
-                val collapsedStringWithSpan = getCollapsedStringWithSpan(collapsedString)
-                collapsedStaticLayout = getStaticLayout(
-                    spannableString = collapsedStringWithSpan,
-                    boundWidth = width
-                )
-                isCollapsable = true
-                isExpanding = false
-            }
-            isNeedCalculated = false
+        if (hasViewWidth.not()) {
+            viewWidth = width
+            hasViewWidth = true
+            requestLayout()
+            return
         }
         if (isExpanding) {
-            contentHeight = expandedStaticLayout.height
             expandedStaticLayout.draw(canvas)
         } else {
-            contentHeight = collapsedStaticLayout.height
             collapsedStaticLayout.draw(canvas)
         }
         isRemeasured = if (isRemeasured) {
@@ -162,29 +178,29 @@ class ExpandableTextView @JvmOverloads constructor(
         return subStringEndPosition - 1
     }
 
-    override fun setBackground(background: Drawable?) {
-
-    }
-
-    override fun setBackgroundResource(resid: Int) {
-
-    }
-
-    override fun setBackgroundColor(color: Int) {
-
-    }
-
-    override fun setBackgroundTintBlendMode(blendMode: BlendMode?) {
-
-    }
-
-    override fun setBackgroundTintList(tint: ColorStateList?) {
-
-    }
-
-    override fun setBackgroundTintMode(tintMode: PorterDuff.Mode?) {
-
-    }
+//    override fun setBackground(background: Drawable?) {
+//
+//    }
+//
+//    override fun setBackgroundResource(resid: Int) {
+//
+//    }
+//
+//    override fun setBackgroundColor(color: Int) {
+//
+//    }
+//
+//    override fun setBackgroundTintBlendMode(blendMode: BlendMode?) {
+//
+//    }
+//
+//    override fun setBackgroundTintList(tint: ColorStateList?) {
+//
+//    }
+//
+//    override fun setBackgroundTintMode(tintMode: PorterDuff.Mode?) {
+//
+//    }
 }
 
 val Int.dp: Float
