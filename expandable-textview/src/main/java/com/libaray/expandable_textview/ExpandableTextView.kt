@@ -75,6 +75,10 @@ class ExpandableTextView @JvmOverloads constructor(
     private lateinit var collapsedStaticLayout: StaticLayout
     private var hasViewWidth = false
     private var viewWidth = 0
+    private var paddingTop = 0
+    private var paddingBottom = 0
+    private var paddingStart = 0
+    private var paddingEnd = 0
     var lineToEllipsize = 1
         set(value) {
             if (value <= 0 || value == field) return
@@ -121,13 +125,33 @@ class ExpandableTextView @JvmOverloads constructor(
         setMeasuredDimension(widthMeasureSpec, contentHeight)
     }
 
+    fun setPaddings(all: Int) {
+        paddingTop = all
+        paddingBottom = all
+        paddingStart = all
+        paddingEnd = all
+    }
+
+    fun setPaddings(top: Int = 0, bottom: Int = 0, start: Int = 0, end: Int = 0) {
+        paddingTop = top
+        paddingBottom = bottom
+        paddingStart = start
+        paddingEnd = end
+    }
+
     private fun getStaticLayout(
         string: String? = null,
         spannableString: SpannableString? = null,
         boundWidth: Int
     ): StaticLayout {
         val text = string ?: spannableString
-        return StaticLayout.Builder.obtain(text ?: "", 0, text?.length ?: 0, textPaint, boundWidth)
+        return StaticLayout.Builder.obtain(
+            text ?: "",
+            0,
+            text?.length ?: 0,
+            textPaint,
+            boundWidth - (paddingStart.dp + paddingEnd.dp).toInt()
+        )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setLineSpacing(0f, 1f)
             .setIncludePad(true)
@@ -152,10 +176,18 @@ class ExpandableTextView @JvmOverloads constructor(
             requestLayout()
             return
         }
-        if (isExpanding) {
-            expandedStaticLayout.draw(canvas)
+        val staticLayout = if (isExpanding) {
+            expandedStaticLayout
         } else {
-            collapsedStaticLayout.draw(canvas)
+            collapsedStaticLayout
+        }
+        if (paddingStart != 0 || paddingTop != 0) {
+            canvas.save()
+            canvas.translate(paddingStart.dp, 0f)
+            staticLayout.draw(canvas)
+            canvas.restore()
+        } else {
+            staticLayout.draw(canvas)
         }
         isRemeasured = if (isRemeasured) {
             false
@@ -177,30 +209,6 @@ class ExpandableTextView @JvmOverloads constructor(
         }
         return subStringEndPosition - 1
     }
-
-//    override fun setBackground(background: Drawable?) {
-//
-//    }
-//
-//    override fun setBackgroundResource(resid: Int) {
-//
-//    }
-//
-//    override fun setBackgroundColor(color: Int) {
-//
-//    }
-//
-//    override fun setBackgroundTintBlendMode(blendMode: BlendMode?) {
-//
-//    }
-//
-//    override fun setBackgroundTintList(tint: ColorStateList?) {
-//
-//    }
-//
-//    override fun setBackgroundTintMode(tintMode: PorterDuff.Mode?) {
-//
-//    }
 }
 
 val Int.dp: Float
