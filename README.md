@@ -2,6 +2,7 @@
 This is an custom view using Canva to make the text expandable with ellipsized text.
 
 To begin please follow below instructions:
+
 1/ Add into your settings.gradle
 
 ```
