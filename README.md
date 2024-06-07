@@ -11,7 +11,7 @@ maven { url 'https://jitpack.io' }
 2/ Add into your build.gradle
 
 ```
-implementation 'com.github.khangchow:ExpandableTextView:1.1.2'
+implementation 'com.github.khangchow:ExpandableTextView:1.1.3'
 ```
 
 3/ How to use 
@@ -44,6 +44,7 @@ binding.tv.apply {
             ellipsizedTextColor = Color.BLUE
             ellipsizedText = "...Whatsup!"
             lineToEllipsize = 3
+            setPaddings(all = 20) or setPaddings(top = 20, bottom = 10)
         }
 ```
 
