@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Rect
 import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
@@ -27,8 +28,7 @@ class ExpandableTextView @JvmOverloads constructor(
             if (value == field) return
             field = value
             isNeedCalculated = true
-            hasViewWidth = false
-            invalidate()
+            requestLayout()
         }
     private val textPaint = TextPaint().apply {
         textSize = 20.sp
@@ -40,8 +40,7 @@ class ExpandableTextView @JvmOverloads constructor(
             field = value
             textPaint.textSize = value.sp
             isNeedCalculated = true
-            hasViewWidth = false
-            invalidate()
+            requestLayout()
         }
     var textColor = Color.BLACK
         set(value) {
@@ -49,16 +48,14 @@ class ExpandableTextView @JvmOverloads constructor(
             field = value
             textPaint.color = value
             isNeedCalculated = true
-            hasViewWidth = false
-            invalidate()
+            requestLayout()
         }
     var ellipsizedTextColor = Color.GRAY
         set(value) {
             if (value == field) return
             field = value
             isNeedCalculated = true
-            hasViewWidth = false
-            invalidate()
+            requestLayout()
         }
     private var contentHeight = 1
     var ellipsizedText = "...See more"
@@ -66,15 +63,12 @@ class ExpandableTextView @JvmOverloads constructor(
             if (value == field || value.isBlank()) return
             field = value
             isNeedCalculated = true
-            hasViewWidth = false
-            invalidate()
+            requestLayout()
         }
-    private var isRemeasured = false
     private var isNeedCalculated = true
     private lateinit var expandedStaticLayout: StaticLayout
     private lateinit var collapsedStaticLayout: StaticLayout
     private var hasViewWidth = false
-    private var viewWidth = 0
     private var paddingTop = 0
     private var paddingBottom = 0
     private var paddingStart = 0
@@ -84,33 +78,30 @@ class ExpandableTextView @JvmOverloads constructor(
             if (value <= 0 || value == field) return
             field = value
             isNeedCalculated = true
-            hasViewWidth = false
-            invalidate()
+            requestLayout()
         }
 
     init {
         setOnClickListener {
             if (isCollapsable) {
                 isExpanding = !isExpanding
-                isRemeasured = false
-                invalidate()
+                requestLayout()
             }
         }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         if (isNeedCalculated && hasViewWidth) {
-            expandedStaticLayout = getStaticLayout(text, boundWidth = viewWidth)
+            expandedStaticLayout = getStaticLayout(text)
             if (expandedStaticLayout.lineCount <= lineToEllipsize) {
                 isCollapsable = false
                 isExpanding = true
             } else {
-                val ellipsizedPosition = getTextPositionToEllipsize(viewWidth)
+                val ellipsizedPosition = getTextPositionToEllipsize()
                 val collapsedString = text.substring(0, ellipsizedPosition) + ellipsizedText
                 val collapsedStringWithSpan = getCollapsedStringWithSpan(collapsedString)
                 collapsedStaticLayout = getStaticLayout(
                     spannableString = collapsedStringWithSpan,
-                    boundWidth = viewWidth
                 )
                 isCollapsable = true
                 isExpanding = false
@@ -122,14 +113,14 @@ class ExpandableTextView @JvmOverloads constructor(
         } else {
             if (::collapsedStaticLayout.isInitialized) collapsedStaticLayout.height else 1
         }
-        setMeasuredDimension(widthMeasureSpec, contentHeight)
+        setMeasuredDimension(
+            widthMeasureSpec,
+            contentHeight + paddingTop.dp.toInt() + paddingBottom.dp.toInt()
+        )
     }
 
     fun setPaddings(all: Int) {
-        paddingTop = all
-        paddingBottom = all
-        paddingStart = all
-        paddingEnd = all
+        setPaddings(all, all, all, all)
     }
 
     fun setPaddings(top: Int = 0, bottom: Int = 0, start: Int = 0, end: Int = 0) {
@@ -142,15 +133,15 @@ class ExpandableTextView @JvmOverloads constructor(
     private fun getStaticLayout(
         string: String? = null,
         spannableString: SpannableString? = null,
-        boundWidth: Int
     ): StaticLayout {
-        val text = string ?: spannableString
+        val availableWidth = width - (paddingStart.dp + paddingEnd.dp).toInt()
+        val str = string ?: spannableString
         return StaticLayout.Builder.obtain(
-            text ?: "",
+            str ?: "",
             0,
-            text?.length ?: 0,
+            str?.length ?: 0,
             textPaint,
-            boundWidth - (paddingStart.dp + paddingEnd.dp).toInt()
+            availableWidth
         )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setLineSpacing(0f, 1f)
@@ -170,8 +161,7 @@ class ExpandableTextView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (hasViewWidth.not()) {
-            viewWidth = width
+        if (!hasViewWidth || isNeedCalculated) {
             hasViewWidth = true
             requestLayout()
             return
@@ -183,26 +173,19 @@ class ExpandableTextView @JvmOverloads constructor(
         }
         if (paddingStart != 0 || paddingTop != 0) {
             canvas.save()
-            canvas.translate(paddingStart.dp, 0f)
+            canvas.translate(paddingStart.dp, paddingTop.dp)
             staticLayout.draw(canvas)
             canvas.restore()
         } else {
             staticLayout.draw(canvas)
         }
-        isRemeasured = if (isRemeasured) {
-            false
-        } else {
-            requestLayout()
-            true
-        }
     }
 
-    private fun getTextPositionToEllipsize(layoutWidth: Int): Int {
+    private fun getTextPositionToEllipsize(): Int {
         if (text.isEmpty()) return 0
         var subStringEndPosition = 1
         while (getStaticLayout(
                 text.substring(0, subStringEndPosition) + ellipsizedText,
-                boundWidth = layoutWidth
             ).lineCount <= lineToEllipsize
         ) {
             subStringEndPosition++
